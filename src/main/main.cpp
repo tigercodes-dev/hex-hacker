@@ -6,6 +6,9 @@
 using namespace hexhacker;
 
 #define BLOCK_SIZE 4096
+#define BYTES_PER_LINE 16
+
+#define CALCULATE_LINE_OFFSET(buffer_offset, block) ((block) * BLOCK_SIZE + (buffer_offset))
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -51,20 +54,37 @@ int main(int argc, char* argv[]) {
         BlockReader reader(file, BLOCK_SIZE); // Must catch std::runtime_error if file does not exist.
 
         unsigned char buffer[BLOCK_SIZE] = {0};
-        
-        size_t blocks = reader.get_total_blocks();
+        unsigned int size;
 
-        for (size_t block = 0; block < blocks; block++) {
-            unsigned int size = reader.next_block(reinterpret_cast<char*>(buffer));
+        std::cout << "Offset (x) │ 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n"
+                     "───────────┼────────────────────────────────────────────────";
+
+        do {
+            size = reader.next_block(reinterpret_cast<char*>(buffer));
             for (int i = 0; i < size; i++) {
-                std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(buffer[i]) << std::dec << std::setfill(' ') << ' ';
-                if (i % 16 == 15) {
-                    std::cout << '\n';
+                // Print newline and offset on each line
+                if (i % BYTES_PER_LINE == 0) {
+                    std::cout << "\n0x" << std::hex << std::uppercase
+                    << std::setfill('0') << std::setw(8) << CALCULATE_LINE_OFFSET(i, reader.get_current_block() - 1)
+                    << std::dec << std::nouppercase << std::setfill(' ') << " │ ";
                 }
+
+                // Print hex byte
+                unsigned int byte = static_cast<unsigned int>(buffer[i]);
+                bool bolded = byte != 0;
+
+                if (bolded) std::cout << "\e[1m"; // Bold non-zero bytes
+
+                std::cout << std::hex << std::setfill('0') << std::setw(2) << std::uppercase
+                << byte << std::dec << std::setfill(' ') << std::uppercase << ' ';
+
+                if (bolded) std::cout << "\e[0m"; // Unbold the non zero bytes after
             }
-        }
+        } while (size == BLOCK_SIZE); // Check if we have read final block after reading so we can read at least one block.
+
         std::cout << '\n';
     } catch (const std::runtime_error& e) {
+        // Catch errors thrown by the file operations
         std::cerr << "\e[31;1mError: " << e.what() << "\n";
         return 1;
     }
