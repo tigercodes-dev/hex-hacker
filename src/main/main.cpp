@@ -1,10 +1,16 @@
 #include <iostream>
 #include <string>
+#include <iomanip>
+#include "files.hpp"
+
+using namespace hexhacker;
+
+#define BLOCK_SIZE 4096
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         std::cout << "Usage: " << argv[0] << " <file> [options]\nUse " << argv[0] << " --help to see more detailed usage.\n";
-        return 1;
+        return 2;
     }
 
     std::string file;
@@ -41,7 +47,27 @@ int main(int argc, char* argv[]) {
         return 2;
     }
 
-    std::cout << "File: " << file << std::endl;
+    try {
+        BlockReader reader(file, BLOCK_SIZE); // Must catch std::runtime_error if file does not exist.
+
+        unsigned char buffer[BLOCK_SIZE] = {0};
+        
+        size_t blocks = reader.get_total_blocks();
+
+        for (size_t block = 0; block < blocks; block++) {
+            unsigned int size = reader.next_block(reinterpret_cast<char*>(buffer));
+            for (int i = 0; i < size; i++) {
+                std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(buffer[i]) << std::dec << std::setfill(' ') << ' ';
+                if (i % 16 == 15) {
+                    std::cout << '\n';
+                }
+            }
+        }
+        std::cout << '\n';
+    } catch (const std::runtime_error& e) {
+        std::cerr << "\e[31;1mError: " << e.what() << "\n";
+        return 1;
+    }
 
     return 0;
 }
