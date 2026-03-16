@@ -15,14 +15,41 @@ namespace hexhacker {
 
             size_t get_total_blocks();
 
-            unsigned long get_current_block();
+            size_t get_current_block();
 
             unsigned int get_block_size();
 
         private:
             unsigned int block_size;
             std::ifstream stream;
-            unsigned long current_block;
+            size_t current_block;
+    };
+
+    class BlockWriter {
+        public:
+            BlockWriter(std::string filepath, unsigned int block_size);
+
+            ~BlockWriter();
+
+            void write_next_block(char* buffer);
+
+            void write_incomplete_block(char* buffer, unsigned int size);
+
+            void skip_block();
+
+            size_t get_current_block();
+
+            unsigned int get_block_size();
+
+        private:
+            unsigned int block_size;
+            std::ofstream stream;
+            size_t current_block;
+    };
+
+    class IOException : public std::runtime_error {
+        public:
+            explicit IOException(const std::string& msg);
     };
 }
 

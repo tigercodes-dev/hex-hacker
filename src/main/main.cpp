@@ -60,7 +60,6 @@ int main(int argc, char* argv[]) {
                      "───────────┼────────────────────────────────────────────────";
 
         do {
-            size = reader.next_block(reinterpret_cast<char*>(buffer));
             for (int i = 0; i < size; i++) {
                 // Print newline and offset on each line
                 if (i % BYTES_PER_LINE == 0) {
@@ -83,9 +82,9 @@ int main(int argc, char* argv[]) {
         } while (size == BLOCK_SIZE); // Check if we have read final block after reading so we can read at least one block.
 
         std::cout << '\n';
-    } catch (const std::runtime_error& e) {
+    } catch (const IOException& e) {
         // Catch errors thrown by the file operations
-        std::cerr << "\e[31;1mError: " << e.what() << "\n";
+        std::cerr << "\e[31;1m" << e.what() << "\e[0m\n";
         return 1;
     }
 
