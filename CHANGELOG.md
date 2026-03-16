@@ -10,11 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - File Scrolling
-- File Editing
 
 ### Changed
 
 - Move from ncurses to a more advanced library built for C++
+
+## [v0.1.1] - 2026-3-16
+
+### Added
+
+- Basic editing data with cursor, but cannot write to file yet.
+- Colors for null bytes and changes
 
 ## [v0.1.0] - 2026-3-16
 

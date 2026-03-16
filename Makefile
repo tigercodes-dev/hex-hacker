@@ -2,7 +2,7 @@ export CXX := g++
 export LD := g++
 export BUILD_DIR := $(abspath build)
 
-VERSION = 0.1.0
+VERSION = 0.1.1
 
 EXEC ?= $(BUILD_DIR)/hexhacker
 
