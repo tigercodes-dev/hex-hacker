@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 #include <iomanip>
+#include <ncurses.h>
+#include <curses.h>
 #include "files.hpp"
 
 using namespace hexhacker;
@@ -56,37 +58,78 @@ int main(int argc, char* argv[]) {
         unsigned char buffer[BLOCK_SIZE] = {0};
         unsigned int size;
 
-        std::cout << "Offset (x) │ 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n"
-                     "───────────┼────────────────────────────────────────────────";
+        initscr();
+        scrollok(stdscr, true);
+
+        cbreak();
+        noecho();
+
+        printw("File: %s | %lu bytes | %lu blocks of %u\n", file.c_str(), reader.get_file_size(), reader.get_total_blocks(), BLOCK_SIZE);
+        printw("Offset (x) | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n"
+               "-----------+------------------------------------------------");
 
         do {
+            size = reader.next_block(reinterpret_cast<char*>(buffer));
             for (int i = 0; i < size; i++) {
                 // Print newline and offset on each line
                 if (i % BYTES_PER_LINE == 0) {
-                    std::cout << "\n0x" << std::hex << std::uppercase
-                    << std::setfill('0') << std::setw(8) << CALCULATE_LINE_OFFSET(i, reader.get_current_block() - 1)
-                    << std::dec << std::nouppercase << std::setfill(' ') << " │ ";
+                    printw("\n0x%.8lX |", CALCULATE_LINE_OFFSET(i, reader.get_current_block() - 1));
                 }
 
                 // Print hex byte
-                unsigned int byte = static_cast<unsigned int>(buffer[i]);
-                bool bolded = byte != 0;
+                bool bolded = buffer[i] != 0;
 
-                if (bolded) std::cout << "\e[1m"; // Bold non-zero bytes
+                if (bolded) attron(A_BOLD); // Bold non-zero bytes
 
-                std::cout << std::hex << std::setfill('0') << std::setw(2) << std::uppercase
-                << byte << std::dec << std::setfill(' ') << std::uppercase << ' ';
+                printw(" %.2X", buffer[i]);
 
-                if (bolded) std::cout << "\e[0m"; // Unbold the non zero bytes after
+                if (bolded) attroff(A_BOLD); // Unbold the non zero bytes after
             }
         } while (size == BLOCK_SIZE); // Check if we have read final block after reading so we can read at least one block.
 
-        std::cout << '\n';
+        printw("\n");
+        refresh();
     } catch (const IOException& e) {
         // Catch errors thrown by the file operations
+        endwin();
         std::cerr << "\e[31;1m" << e.what() << "\e[0m\n";
         return 1;
     }
+
+    keypad(stdscr, true);
+
+    int y, x;
+    getyx(stdscr, y, x);
+
+    y--;
+    x += 13;
+    move(y, x);
+
+    refresh();
+
+    int chr;
+    while ((chr = getch()) != 'q') {
+        switch (chr) {
+            case KEY_UP:
+                if (y > 0) y--;
+                move(y, x);
+                break;
+            case KEY_DOWN:
+                y++;
+                move(y, x);
+                break;
+            case KEY_LEFT:
+                if (x > 13) x -= 3;
+                move(y, x);
+                break;
+            case KEY_RIGHT:
+                if (x < 10 + 3 * BYTES_PER_LINE) x += 3;
+                move(y, x);
+                break;
+        }
+        refresh();
+    }
+    endwin();
 
     return 0;
 }

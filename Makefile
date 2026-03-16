@@ -15,6 +15,10 @@ $(EXEC): always
 	$(MAKE) -C src/main EXEC=$(EXEC)
 	echo "Executable file: $@ is ready."
 
+debug: always
+	$(MAKE) -C src/main EXEC=$(EXEC) debug
+	echo "Executable file with debug: $(EXEC) is ready."
+
 always:
 	mkdir -p build
 

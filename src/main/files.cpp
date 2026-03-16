@@ -22,20 +22,20 @@ namespace hexhacker {
     }
 
     size_t BlockReader::get_total_blocks() {
+        size_t size = get_file_size();
+        size_t blocks = size / block_size; // Division is floored
+        if (size % block_size > 0) blocks++; // Add one more block if there is still some left over
+
+        return blocks; 
+    }
+
+    size_t BlockReader::get_file_size() {
         std::streampos old_pos = stream.tellg(); // Save old position
         stream.seekg(0, std::ios::end);
         size_t size = static_cast<size_t>(stream.tellg());
         stream.seekg(old_pos); // Return to old position
 
-        return size / block_size + 1; // Calculate total blocks
-    }
-
-    size_t BlockReader::get_current_block() {
-        return current_block;
-    }
-
-    unsigned int BlockReader::get_block_size() {
-        return block_size;
+        return size;
     }
 
     // Block Writer
@@ -61,14 +61,6 @@ namespace hexhacker {
     void BlockWriter::skip_block() {
         current_block++;
         stream.seekp(block_size, std::ios::cur); // Seek the pointer forward.
-    }
-
-    size_t BlockWriter::get_current_block() {
-        return current_block;
-    }
-
-    unsigned int BlockWriter::get_block_size() {
-        return block_size;
     }
 
     void BlockWriter::write_incomplete_block(char* buffer, unsigned int size) {

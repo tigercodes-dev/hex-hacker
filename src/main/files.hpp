@@ -15,9 +15,15 @@ namespace hexhacker {
 
             size_t get_total_blocks();
 
-            size_t get_current_block();
+            inline size_t get_current_block() {
+                return current_block;
+            }
 
-            unsigned int get_block_size();
+            inline unsigned int get_block_size() {
+                return block_size;
+            }
+
+            size_t get_file_size();
 
         private:
             unsigned int block_size;
@@ -37,9 +43,13 @@ namespace hexhacker {
 
             void skip_block();
 
-            size_t get_current_block();
+            inline size_t get_current_block() {
+                return current_block;
+            }
 
-            unsigned int get_block_size();
+            inline unsigned int get_block_size() {
+                return block_size;
+            }
 
         private:
             unsigned int block_size;
