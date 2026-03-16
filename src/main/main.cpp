@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <ncurses.h>
 #include <curses.h>
+#include <cctype>
 #include "files.hpp"
 
 using namespace hexhacker;
@@ -61,10 +62,23 @@ int main(int argc, char* argv[]) {
         initscr();
         scrollok(stdscr, true);
 
+        bool colors = has_colors();
+
+        if (colors) {
+            start_color();
+            init_pair(1, COLOR_GREEN, COLOR_BLACK); // Title
+            init_color(8, 750, 750, 750);
+            init_pair(2, 8, COLOR_BLACK); // Grayed Out Bytes
+            init_color(9, 1000, 500, 500);
+            init_pair(3, 9, COLOR_BLACK); // Changed Bytes
+        }
+
         cbreak();
         noecho();
 
+        if (colors) attron(COLOR_PAIR(1));
         printw("File: %s | %lu bytes | %lu blocks of %u\n", file.c_str(), reader.get_file_size(), reader.get_total_blocks(), BLOCK_SIZE);
+        if (colors) attroff(COLOR_PAIR(1));
         printw("Offset (x) | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n"
                "-----------+------------------------------------------------");
 
@@ -80,10 +94,12 @@ int main(int argc, char* argv[]) {
                 bool bolded = buffer[i] != 0;
 
                 if (bolded) attron(A_BOLD); // Bold non-zero bytes
+                else if (colors) attron(COLOR_PAIR(2)); // Gray out zero bytes.
 
                 printw(" %.2X", buffer[i]);
 
                 if (bolded) attroff(A_BOLD); // Unbold the non zero bytes after
+                else if (colors) attroff(COLOR_PAIR(2)); // Return to normal color.
             }
         } while (size == BLOCK_SIZE); // Check if we have read final block after reading so we can read at least one block.
 
@@ -98,6 +114,8 @@ int main(int argc, char* argv[]) {
 
     keypad(stdscr, true);
 
+    bool halfbyte = false; // Set if cursor is halfway through byte
+
     int y, x;
     getyx(stdscr, y, x);
 
@@ -109,24 +127,66 @@ int main(int argc, char* argv[]) {
 
     int chr;
     while ((chr = getch()) != 'q') {
+        if (std::isxdigit(chr)) {
+            char upper = std::toupper(chr);
+            bool change = ((inch() & A_CHARTEXT) != upper) || (PAIR_NUMBER(mvinch(x - 1, y) & A_COLOR) == 3);
+
+            if (change) attron(COLOR_PAIR(3)); // Color it red
+            addch(upper);
+            if (change) attroff(COLOR_PAIR(3)); // Stop coloring red
+            
+            x += (halfbyte ? 2 : 1);
+            
+            if (change) {
+                if (halfbyte) {
+                    mvchgat(y, x - 3, 1, A_NORMAL, 3, NULL);
+                } else {
+                    mvchgat(y, x, 1, A_NORMAL, 3, NULL);
+                }
+            }
+
+            if (x >= 10 + 3 *BYTES_PER_LINE) {
+                x = 13;
+                y++;
+            }
+            move(y, x);
+            halfbyte = !halfbyte;
+        }
         switch (chr) {
             case KEY_UP:
                 if (y > 0) y--;
+                if (halfbyte) x--;
                 move(y, x);
+                halfbyte = false;
                 break;
             case KEY_DOWN:
                 y++;
+                if (halfbyte) x--;
                 move(y, x);
+                halfbyte = false;
                 break;
             case KEY_LEFT:
-                if (x > 13) x -= 3;
+                if (x > 13) x -= (halfbyte ? 1 : 3);
+                else {
+                    // Go backwards one line
+                    x = 10 + 3 * BYTES_PER_LINE;
+                    y--;
+                }
                 move(y, x);
+                halfbyte = false;
                 break;
             case KEY_RIGHT:
-                if (x < 10 + 3 * BYTES_PER_LINE) x += 3;
+                if (x < 10 + 3 * BYTES_PER_LINE) x += (halfbyte ? 2 : 3);
+                else {
+                    // Go forwards one line
+                    x = 13;
+                    y++;
+                }
                 move(y, x);
+                halfbyte = false;
                 break;
         }
+
         refresh();
     }
     endwin();
